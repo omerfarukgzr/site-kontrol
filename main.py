@@ -3,7 +3,7 @@ import random
 import os
 import sys
 from bs4 import BeautifulSoup
-from datetime import datetime # Saat kontrolü için gerekli
+# datetime kütüphanesini kaldırdık çünkü artık saate bakmıyoruz.
 
 # --- AYARLAR ---
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -76,34 +76,24 @@ if __name__ == "__main__":
             hata_listesi.append(f"🚫 <b>ERİŞİM YOK</b>\n🔗 {url}")
             print(f"ÇÖKME: {url}")
 
-    # --- MESAJ GÖNDERME MANTIĞI ---
+    # --- RAPORLAMA (Her Seferinde Mesaj Atacak) ---
 
-    # DURUM 1: HATA VARSA (Hemen gönder)
     if len(hata_listesi) > 0:
+        # HATA VARSA
         ana_mesaj = (
-                f"🚨 <b>RİSALE ONLINE ERİŞİM SORUNU!</b>\n"
-                f"Kontrol edilen {len(tum_liste)} sayfadan {len(hata_listesi)} tanesi açılmıyor!\n\n"
+                f"🚨 <b>ERİŞİM SORUNU!</b>\n"
+                f"{len(hata_listesi)} sayfa açılmadı!\n\n"
                 + "\n\n".join(hata_listesi)
         )
         telegram_gonder(ana_mesaj)
-        print(">> 🚨 Hata bildirimi gönderildi.")
-        sys.exit(1) # GitHub Actions'ta kırmızıyı yak
-
-    # DURUM 2: HATA YOKSA (Sadece saat başlarında gönder)
+        sys.exit(1) # Hata koduyla çık
     else:
-        # Şu anki dakikayı alıyoruz (0 ile 59 arası)
-        su_anki_dakika = datetime.now().minute
-        
-        # GitHub bazen tam 00'da başlamaz, 0-12 arası bir dakikadaysak "Saat başı" kabul ediyoruz.
-        # Script 10 dakikada bir çalıştığı için saatte sadece 1 kez bu aralığa denk gelir.
-        if su_anki_dakika < 12:
-            ok_mesaji = (
-                f"✅ <b>SİSTEM STABİL</b>\n"
-                f"Saatlik rutin kontrol yapıldı.\n"
-                f"Taranan Sayfa: {basarili_sayisi}\n"
-                f"Durum: Sorun Yok."
-            )
-            telegram_gonder(ok_mesaji)
-            print(">> ✅ Saatlik OK raporu gönderildi.")
-        else:
-            print(f">> ✅ Sorun yok. (Dakika: {su_anki_dakika}, rapor zamanı değil, sessiz mod.)")
+        # HATA YOKSA (Artık her 10 dakikada bir bu mesaj gelir)
+        ok_mesaji = (
+            f"✅ <b>SİSTEM STABİL</b>\n"
+            f"10 dakikalık kontrol tamamlandı.\n"
+            f"Taranan Sayfa: {basarili_sayisi}\n"
+            f"Durum: Sorun Yok."
+        )
+        telegram_gonder(ok_mesaji)
+        print(">> ✅ OK raporu gönderildi.")
