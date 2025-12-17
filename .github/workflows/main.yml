@@ -1,0 +1,30 @@
+name: Site Kontrol Botu
+
+on:
+  schedule:
+    # Her 10 dakikada bir çalıştır
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check_site:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Depoyu Çek (Checkout)
+        uses: actions/checkout@v3
+
+      - name: Python Kurulumu
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Kütüphaneleri Yükle
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Botu Çalıştır
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
