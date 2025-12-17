@@ -2,8 +2,8 @@ import requests
 import random
 import os
 import sys
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
-# datetime kütüphanesini kaldırdık çünkü artık saate bakmıyoruz.
 
 # --- AYARLAR ---
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -20,10 +20,19 @@ def telegram_gonder(mesaj):
         print("Token veya Chat ID eksik! Mesaj gönderilemedi.")
         return
 
+    # --- SAAT VE İMZA AYARI (Türkiye Saati UTC+3) ---
+    tr_saati = datetime.utcnow() + timedelta(hours=3)
+    saat_str = tr_saati.strftime('%H:%M:%S')
+    cizgi = "——————————————————"
+    
+    # Mesajın sonuna ekle
+    son_hal = f"{mesaj}\n\n🕒 {saat_str}\n{cizgi}"
+    # ------------------------------------------------
+
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         'chat_id': TELEGRAM_CHAT_ID, 
-        'text': mesaj, 
+        'text': son_hal, 
         'parse_mode': 'HTML', 
         'disable_web_page_preview': True
     }
@@ -76,7 +85,7 @@ if __name__ == "__main__":
             hata_listesi.append(f"🚫 <b>ERİŞİM YOK</b>\n🔗 {url}")
             print(f"ÇÖKME: {url}")
 
-    # --- RAPORLAMA (Her Seferinde Mesaj Atacak) ---
+    # --- RAPORLAMA ---
 
     if len(hata_listesi) > 0:
         # HATA VARSA
@@ -86,9 +95,9 @@ if __name__ == "__main__":
                 + "\n\n".join(hata_listesi)
         )
         telegram_gonder(ana_mesaj)
-        sys.exit(1) # Hata koduyla çık
+        sys.exit(1) # GitHub'da kırmızı görünmesi için hata koduyla çık
     else:
-        # HATA YOKSA (Artık her 10 dakikada bir bu mesaj gelir)
+        # HATA YOKSA
         ok_mesaji = (
             f"✅ <b>SİSTEM STABİL</b>\n"
             f"10 dakikalık kontrol tamamlandı.\n"
