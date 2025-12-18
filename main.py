@@ -15,7 +15,7 @@ SABIT_SAYFALAR = [
 ]
 KAYNAK_URL = "https://risale.online/soru-cevap?sort=son-eklenen"
 
-def telegram_gonder(mesaj):
+def telegram_gonder(mesaj, mention_user=False):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("Token veya Chat ID eksik! Mesaj gönderilemedi.")
         return
@@ -24,9 +24,12 @@ def telegram_gonder(mesaj):
     tr_saati = datetime.utcnow() + timedelta(hours=3)
     saat_str = tr_saati.strftime('%H:%M:%S')
     cizgi = "——————————————————"
-    
+
+    # Hata durumlarında kullanıcıyı etiketle (çizgiden hemen önce)
+    mention_line = "@omerfarukgzr\n" if mention_user else ""
+
     # Mesajın sonuna ekle
-    son_hal = f"{mesaj}\n\n🕒 {saat_str}\n{cizgi}"
+    son_hal = f"{mesaj}\n\n🕒 {saat_str}\n{mention_line}{cizgi}"
     # ------------------------------------------------
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -90,11 +93,12 @@ if __name__ == "__main__":
     if len(hata_listesi) > 0:
         # HATA VARSA
         ana_mesaj = (
-                f"🚨 <b>ERİŞİM SORUNU!</b>\n"
-                f"{len(hata_listesi)} sayfa açılmadı!\n\n"
-                + "\n\n".join(hata_listesi)
+            f"🚨 <b>ERİŞİM SORUNU!</b>\n"
+            f"{len(hata_listesi)} sayfa açılmadı!\n\n"
+            + "\n\n".join(hata_listesi)
         )
-        telegram_gonder(ana_mesaj)
+        # Hata mesajlarında kullanıcıyı etiketle
+        telegram_gonder(ana_mesaj, mention_user=True)
         sys.exit(1) # GitHub'da kırmızı görünmesi için hata koduyla çık
     else:
         # HATA YOKSA
