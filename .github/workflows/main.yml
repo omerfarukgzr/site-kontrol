@@ -2,7 +2,6 @@ name: Site Kontrol Botu
 
 on:
   schedule:
-    # Her 10 dakikada bir çalıştır
     - cron: '*/7 * * * *'
   workflow_dispatch:
 
