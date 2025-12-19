@@ -5,9 +5,9 @@ import sys
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 
-# --- AYARLAR ---
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+KULLANICI_ADI = os.environ.get("TELEGRAM_USERNAME")
 
 SABIT_SAYFALAR = [
     "https://risale.online/",
@@ -15,34 +15,33 @@ SABIT_SAYFALAR = [
 ]
 KAYNAK_URL = "https://risale.online/soru-cevap?sort=son-eklenen"
 
-def telegram_gonder(mesaj, mention_user=False):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Token veya Chat ID eksik! Mesaj gönderilemedi.")
-        return
 
-    # --- SAAT VE İMZA AYARI (Türkiye Saati UTC+3) ---
+def telegram_gonder(mesaj, hata_var_mi=False):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("❌ HATA: Token eksik!")
+        sys.exit(1)
+
     tr_saati = datetime.utcnow() + timedelta(hours=3)
     saat_str = tr_saati.strftime('%H:%M:%S')
     cizgi = "——————————————————"
 
-    # Hata durumlarında kullanıcıyı etiketle (çizgiden hemen önce)
-    mention_line = "@omerfarukgzr\n" if mention_user else ""
+    baslik = f"⚠️ {KULLANICI_ADI} DİKKAT!\n" if hata_var_mi else ""
 
-    # Mesajın sonuna ekle
-    son_hal = f"{mesaj}\n\n🕒 {saat_str}\n{mention_line}{cizgi}"
-    # ------------------------------------------------
+    son_hal = f"{baslik}{mesaj}\n\n🕒 {saat_str}\n{cizgi}"
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
     payload = {
-        'chat_id': TELEGRAM_CHAT_ID, 
-        'text': son_hal, 
-        'parse_mode': 'HTML', 
+        'chat_id': TELEGRAM_CHAT_ID,
+        'text': son_hal,
+        'parse_mode': 'HTML',
         'disable_web_page_preview': True
     }
     try:
-        requests.post(url, data=payload, timeout=10)
+        requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        print(f"Telegram hatası: {e}")
+        print(f"Hata: {e}")
+
 
 def dinamik_linkleri_bul():
     linkler = []
@@ -64,7 +63,7 @@ def dinamik_linkleri_bul():
     except:
         return []
 
-# --- ANA İŞLEM ---
+
 if __name__ == "__main__":
     print("🚀 Kontrol başlatılıyor...")
 
@@ -72,7 +71,6 @@ if __name__ == "__main__":
     tum_liste = SABIT_SAYFALAR + dinamik_linkler
     hata_listesi = []
     basarili_sayisi = 0
-
     headers = {'User-Agent': 'Mozilla/5.0 (GitHub Actions Monitor)'}
 
     for url in tum_liste:
@@ -88,25 +86,18 @@ if __name__ == "__main__":
             hata_listesi.append(f"🚫 <b>ERİŞİM YOK</b>\n🔗 {url}")
             print(f"ÇÖKME: {url}")
 
-    # --- RAPORLAMA ---
-
     if len(hata_listesi) > 0:
-        # HATA VARSA
         ana_mesaj = (
-            f"🚨 <b>ERİŞİM SORUNU!</b>\n"
-            f"{len(hata_listesi)} sayfa açılmadı!\n\n"
-            + "\n\n".join(hata_listesi)
+                f"🚨 <b>ERİŞİM SORUNU!</b>\n"
+                f"{len(hata_listesi)} sayfa açılmadı!\n\n"
+                + "\n\n".join(hata_listesi)
         )
-        # Hata mesajlarında kullanıcıyı etiketle
-        telegram_gonder(ana_mesaj, mention_user=True)
-        sys.exit(1) # GitHub'da kırmızı görünmesi için hata koduyla çık
+        telegram_gonder(ana_mesaj, hata_var_mi=True)
+        print(">> ⚠️ Hata raporu (Etiketli) gönderildi.")
     else:
-        # HATA YOKSA
         ok_mesaji = (
             f"✅ <b>SİSTEM STABİL</b>\n"
-            f"10 dakikalık kontrol tamamlandı.\n"
-            f"Taranan Sayfa: {basarili_sayisi}\n"
-            f"Durum: Sorun Yok."
+            f"Kontrol tamamlandı. ({basarili_sayisi} sayfa aktif)"
         )
-        telegram_gonder(ok_mesaji)
-        print(">> ✅ OK raporu gönderildi.")
+        telegram_gonder(ok_mesaji, hata_var_mi=False)
+        print(">> ✅ OK raporu (Etiketsiz) gönderildi.")
