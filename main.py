@@ -9,11 +9,22 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 KULLANICI_ADI = os.environ.get("TELEGRAM_USERNAME")
 
+# Login bilgileri
+LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL")
+LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD")
+LOGIN_URL = "https://idare.risale.online/api/auth/login"
+
+# Kontrol edilecek URL'ler
+IDARE_URLS = [
+    "https://idare.risale.online/",
+    "https://idare.risale.online/qa/12261"
+]
+
 SABIT_SAYFALAR = [
     "https://risale.online/",
     "https://risale.online/soru-cevap?sort=son-eklenen"
 ]
-KAYNAK_URL = "https://risale.online/soru-cevap?sort=son-eklenen"
+KAYNAK_URL = SABIT_SAYFALAR[1]
 
 
 def telegram_gonder(mesaj, hata_var_mi=False):
@@ -43,6 +54,36 @@ def telegram_gonder(mesaj, hata_var_mi=False):
         print(f"Hata: {e}")
 
 
+def login_ol():
+    """Login yapıp session döndürür"""
+    if not LOGIN_EMAIL or not LOGIN_PASSWORD:
+        print("⚠️ Login bilgileri eksik, login olmadan devam ediliyor...")
+        return None
+    
+    headers = {
+        'accept': 'application/json',
+        'content-type': 'application/json'
+    }
+    
+    payload = {
+        "email": LOGIN_EMAIL,
+        "password": LOGIN_PASSWORD
+    }
+    
+    session = requests.Session()
+    try:
+        response = session.post(LOGIN_URL, json=payload, headers=headers, timeout=15)
+        if response.status_code == 200:
+            print("✅ Login başarılı")
+            return session
+        else:
+            print(f"❌ Login başarısız: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"❌ Login hatası: {e}")
+        return None
+
+
 def dinamik_linkleri_bul():
     linkler = []
     headers = {'User-Agent': 'Mozilla/5.0 (GitHub Actions Monitor)'}
@@ -67,15 +108,24 @@ def dinamik_linkleri_bul():
 if __name__ == "__main__":
     print("🚀 Kontrol başlatılıyor...")
 
+    # Login gerektiren URL'ler için session oluştur
+    session = login_ol()
+    
     dinamik_linkler = dinamik_linkleri_bul()
-    tum_liste = SABIT_SAYFALAR + dinamik_linkler
+    tum_liste = SABIT_SAYFALAR + dinamik_linkler + IDARE_URLS
+    
     hata_listesi = []
     basarili_sayisi = 0
     headers = {'User-Agent': 'Mozilla/5.0 (GitHub Actions Monitor)'}
 
     for url in tum_liste:
         try:
-            resp = requests.get(url, headers=headers, timeout=20)
+            # Login gerektiren URL'ler için session kullan
+            if session and 'idare.risale.online' in url:
+                resp = session.get(url, headers=headers, timeout=20)
+            else:
+                resp = requests.get(url, headers=headers, timeout=20)
+            
             if resp.status_code != 200:
                 hata_listesi.append(f"❌ <b>HATA ({resp.status_code})</b>\n🔗 {url}")
                 print(f"HATA: {url}")
@@ -84,7 +134,7 @@ if __name__ == "__main__":
                 print(f"OK: {url}")
         except Exception as e:
             hata_listesi.append(f"🚫 <b>ERİŞİM YOK</b>\n🔗 {url}")
-            print(f"ÇÖKME: {url}")
+            print(f"ÇÖKME: {url} - {e}")
 
     if len(hata_listesi) > 0:
         ana_mesaj = (
