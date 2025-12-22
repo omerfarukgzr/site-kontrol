@@ -1,9 +1,9 @@
 name: Site Kontrol Botu
 
 on:
-  schedule:
-    - cron: '*/7 * * * *'
-  workflow_dispatch:
+  repository_dispatch:
+    types: [10-dakikada-bir-calis] # Sinyal türünü buraya yazıyoruz
+  workflow_dispatch: # Manuel butonla çalıştırmak için
 
 jobs:
   check_site:
