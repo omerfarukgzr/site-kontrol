@@ -3,7 +3,7 @@ import requests
 import time
 import sys
 from datetime import datetime, timedelta
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, KULLANICI_ADI
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, KULLANICI_ADI, AUTHORIZED_CHAT_ID
 from username_manager import usernames_yukle, username_ekle, username_cikar
 from settings_manager import bildirim_durumu_al, bildirim_durumu_degistir
 
@@ -121,6 +121,14 @@ def bot_komutlari_kaydet():
         return False
 
 
+def yetki_kontrol(chat_id):
+    """Kullanıcının yetkili olup olmadığını kontrol eder"""
+    if not AUTHORIZED_CHAT_ID:
+        # Eğer AUTHORIZED_CHAT_ID tanımlı değilse, herkese izin ver (geriye dönük uyumluluk)
+        return True
+    return str(chat_id) == str(AUTHORIZED_CHAT_ID)
+
+
 def bot_baglanti_testi():
     """Bot'un Telegram API'ye bağlanabildiğini test eder"""
     if not TELEGRAM_TOKEN:
@@ -220,6 +228,11 @@ def komut_isle(update):
         return True
     
     elif normalized_komut == 'adduser':
+        # Yetki kontrolü
+        if not yetki_kontrol(chat_id):
+            telegram_mesaj_gonder(chat_id, "❌ Bu komutu kullanmak için yetkiniz bulunmamaktadır.", reply_to_message_id=message_id)
+            return True
+        
         if len(parts) < 2:
             # Komut seçildi ama username verilmemiş, kullanıcıya örnek göster
             ornek_mesaj = (
@@ -239,6 +252,11 @@ def komut_isle(update):
         return True
     
     elif normalized_komut == 'deletuser':
+        # Yetki kontrolü
+        if not yetki_kontrol(chat_id):
+            telegram_mesaj_gonder(chat_id, "❌ Bu komutu kullanmak için yetkiniz bulunmamaktadır.", reply_to_message_id=message_id)
+            return True
+        
         if len(parts) < 2:
             # Komut seçildi ama username verilmemiş, kullanıcıya örnek göster
             ornek_mesaj = (
@@ -268,12 +286,22 @@ def komut_isle(update):
         return True
     
     elif normalized_komut == 'notify_on':
+        # Yetki kontrolü
+        if not yetki_kontrol(chat_id):
+            telegram_mesaj_gonder(chat_id, "❌ Bu komutu kullanmak için yetkiniz bulunmamaktadır.", reply_to_message_id=message_id)
+            return True
+        
         # Direkt bildirim aç komutu
         basarili, mesaj = bildirim_durumu_degistir(True)
         telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'notify_off':
+        # Yetki kontrolü
+        if not yetki_kontrol(chat_id):
+            telegram_mesaj_gonder(chat_id, "❌ Bu komutu kullanmak için yetkiniz bulunmamaktadır.", reply_to_message_id=message_id)
+            return True
+        
         # Direkt bildirim kapat komutu
         basarili, mesaj = bildirim_durumu_degistir(False)
         telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
