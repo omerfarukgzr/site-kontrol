@@ -1,18 +1,24 @@
 """Ana giriş noktası"""
 import argparse
-from telegram_bot import bot_dinle, telegram_gonder
+from telegram_bot import bot_dinle, bot_mesajlari_isle, telegram_gonder
 from site_checker import site_kontrol_et
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Site Kontrol Botu')
-    parser.add_argument('--bot', action='store_true', help='Bot dinleme modunu başlat')
+    parser.add_argument('--bot', action='store_true', help='Bot dinleme modunu başlat (sürekli çalışır)')
     args = parser.parse_args()
     
     if args.bot:
+        # Sürekli dinleme modu (lokal geliştirme için)
         bot_dinle()
     else:
-        # Normal site kontrol modu
+        # GitHub Actions modu: Önce bekleyen mesajları işle, sonra site kontrolü yap
+        
+        # 1. Bekleyen Telegram mesajlarını işle
+        bot_mesajlari_isle()
+        
+        # 2. Site kontrolü yap
         hata_listesi, basarili_sayisi = site_kontrol_et()
 
         if len(hata_listesi) > 0:

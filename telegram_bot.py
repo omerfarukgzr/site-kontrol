@@ -8,18 +8,26 @@ from username_manager import usernames_yukle, username_ekle, username_cikar
 from settings_manager import bildirim_durumu_al, bildirim_durumu_degistir
 
 
-def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML'):
+def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML', reply_to_message_id=None):
     """Telegram'a mesaj gönderir"""
     if not TELEGRAM_TOKEN:
         return False
     
+    cizgi = "——————————————————"
+    mesaj_son = f"{mesaj}\n{cizgi}"
+    
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         'chat_id': chat_id,
-        'text': mesaj,
+        'text': mesaj_son,
         'parse_mode': parse_mode,
         'disable_web_page_preview': True
     }
+    
+    # Mesaja yanıt olarak gönder (alıntı)
+    if reply_to_message_id:
+        payload['reply_to_message_id'] = reply_to_message_id
+    
     try:
         response = requests.post(url, json=payload, timeout=10)
         return response.status_code == 200
@@ -145,6 +153,7 @@ def komut_isle(update):
     
     message = update['message']
     chat_id = message['chat']['id']
+    message_id = message.get('message_id')  # Alıntı için mesaj ID'si
     text = message.get('text', '')
     
     # Debug: Gelen mesajı göster
@@ -193,7 +202,7 @@ def komut_isle(update):
             "/yardim - Yardım mesajı\n\n"
             "💡 <i>Not: @ işareti opsiyoneldir</i>"
         )
-        telegram_mesaj_gonder(chat_id, baslangic_mesaji)
+        telegram_mesaj_gonder(chat_id, baslangic_mesaji, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'help':
@@ -210,7 +219,7 @@ def komut_isle(update):
             "• /yardim - Yardım mesajı\n\n"
             "💡 <i>Not: @ işareti opsiyoneldir</i>"
         )
-        telegram_mesaj_gonder(chat_id, help_mesaji)
+        telegram_mesaj_gonder(chat_id, help_mesaji, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'adduser':
@@ -224,12 +233,12 @@ def komut_isle(update):
                 "• <code>/ekle omer</code>\n\n"
                 "💡 <i>@ işareti opsiyoneldir</i>"
             )
-            telegram_mesaj_gonder(chat_id, ornek_mesaj)
+            telegram_mesaj_gonder(chat_id, ornek_mesaj, reply_to_message_id=message_id)
             return True
         
         username = parts[1]
         basarili, mesaj = username_ekle(username)
-        telegram_mesaj_gonder(chat_id, mesaj)
+        telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'deletuser':
@@ -243,12 +252,12 @@ def komut_isle(update):
                 "• <code>/sil omer</code>\n\n"
                 "💡 <i>@ işareti opsiyoneldir</i>"
             )
-            telegram_mesaj_gonder(chat_id, ornek_mesaj)
+            telegram_mesaj_gonder(chat_id, ornek_mesaj, reply_to_message_id=message_id)
             return True
         
         username = parts[1]
         basarili, mesaj = username_cikar(username)
-        telegram_mesaj_gonder(chat_id, mesaj)
+        telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'userlist':
@@ -258,31 +267,78 @@ def komut_isle(update):
             mesaj = f"📝 <b>Kayıtlı Username'ler:</b>\n\n{liste}\n\nToplam: {len(usernames)}"
         else:
             mesaj = "📝 Henüz kayıtlı username yok.\n\n/ekle @kullanici ile ekleyebilirsiniz."
-        telegram_mesaj_gonder(chat_id, mesaj)
+        telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'notify_on':
         # Direkt bildirim aç komutu
         basarili, mesaj = bildirim_durumu_degistir(True)
-        telegram_mesaj_gonder(chat_id, mesaj)
+        telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     elif normalized_komut == 'notify_off':
         # Direkt bildirim kapat komutu
         basarili, mesaj = bildirim_durumu_degistir(False)
-        telegram_mesaj_gonder(chat_id, mesaj)
+        telegram_mesaj_gonder(chat_id, mesaj, reply_to_message_id=message_id)
         return True
     
     # Bilinmeyen komut
     elif text.startswith('/'):
-        telegram_mesaj_gonder(chat_id, "❌ Bilinmeyen komut!\n\n/help ile tüm komutları görebilirsiniz.")
+        telegram_mesaj_gonder(chat_id, "❌ Bilinmeyen komut!\n\n/help ile tüm komutları görebilirsiniz.", reply_to_message_id=message_id)
         return True
     
     return None
 
 
+def bot_mesajlari_isle():
+    """Bekleyen Telegram mesajlarını tek seferlik işler (GitHub Actions için)"""
+    if not TELEGRAM_TOKEN:
+        print("❌ TELEGRAM_TOKEN eksik!")
+        return 0
+    
+    print("📬 Bekleyen mesajlar kontrol ediliyor...")
+    
+    # Bot komutlarını kaydet (otomatik öneri için)
+    bot_komutlari_kaydet()
+    
+    islenen_mesaj = 0
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+        params = {
+            'timeout': 5  # Kısa timeout, bekleyen mesajları al
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('ok') and data.get('result'):
+                updates = data['result']
+                if updates:
+                    print(f"📬 {len(updates)} bekleyen mesaj bulundu")
+                    for update in updates:
+                        komut_isle(update)
+                        islenen_mesaj += 1
+                    
+                    # Son mesajı işaretleyip sil (offset ile)
+                    last_update_id = updates[-1]['update_id']
+                    # Mesajları temizle (acknowledge)
+                    requests.get(url, params={'offset': last_update_id + 1, 'timeout': 1}, timeout=5)
+                    print(f"✅ {islenen_mesaj} mesaj işlendi")
+                else:
+                    print("📭 Bekleyen mesaj yok")
+        else:
+            print(f"⚠️ API yanıt hatası: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Mesaj işleme hatası: {e}")
+    
+    return islenen_mesaj
+
+
 def bot_dinle():
-    """Telegram bot'unu dinler ve komutları işler"""
+    """Telegram bot'unu dinler ve komutları işler (sürekli çalışan mod)"""
     if not TELEGRAM_TOKEN:
         print("❌ TELEGRAM_TOKEN eksik!")
         print("💡 Environment variable olarak ayarlayın: export TELEGRAM_TOKEN='your_token'")
