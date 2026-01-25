@@ -19,8 +19,7 @@ jobs:
           python-version: '3.9'
 
       - name: Kütüphaneleri Yükle
-        run: |
-          pip install requests beautifulsoup4
+        run: pip install -r requirements.txt
 
       - name: Botu Çalıştır
         env:
@@ -29,4 +28,6 @@ jobs:
           AUTHORIZED_CHAT_ID: ${{ secrets.AUTHORIZED_CHAT_ID }}
           LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+          JSONBIN_API_KEY: ${{ secrets.JSONBIN_API_KEY }}
+          JSONBIN_BIN_ID: ${{ secrets.JSONBIN_BIN_ID }}
         run: python main.py

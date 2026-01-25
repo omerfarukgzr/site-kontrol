@@ -4,8 +4,8 @@ import time
 import sys
 from datetime import datetime, timedelta
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, AUTHORIZED_CHAT_ID
-from username_manager import usernames_yukle, username_ekle, username_cikar
-from settings_manager import bildirim_durumu_al, bildirim_durumu_degistir
+from github_storage import usernames_yukle, username_ekle, username_cikar
+from github_storage import bildirim_durumu_al, bildirim_durumu_degistir
 
 
 def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML', reply_to_message_id=None):
