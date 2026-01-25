@@ -121,8 +121,8 @@ def bot_komutlari_kaydet():
 def yetki_kontrol(chat_id):
     """Kullanıcının yetkili olup olmadığını kontrol eder"""
     if not AUTHORIZED_CHAT_ID:
-        # Eğer AUTHORIZED_CHAT_ID tanımlı değilse, herkese izin ver (geriye dönük uyumluluk)
-        return True
+        print("⚠️ UYARI: AUTHORIZED_CHAT_ID tanımlanmamış! Güvenlik nedeniyle erişim reddedildi.")
+        return False  # Güvenlik nedeniyle erişimi kapatın
     return str(chat_id) == str(AUTHORIZED_CHAT_ID)
 
 
