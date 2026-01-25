@@ -3,7 +3,7 @@ import requests
 import time
 import sys
 from datetime import datetime, timedelta
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, KULLANICI_ADI, AUTHORIZED_CHAT_ID
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, AUTHORIZED_CHAT_ID
 from username_manager import usernames_yukle, username_ekle, username_cikar
 from settings_manager import bildirim_durumu_al, bildirim_durumu_degistir
 
@@ -54,9 +54,6 @@ def telegram_gonder(mesaj, hata_var_mi=False):
         # Tüm username'leri @ ile etiketle
         etiketler = " ".join([f"@{u}" for u in usernames])
         baslik = f"⚠️ {etiketler} DİKKAT!\n"
-    elif hata_var_mi and KULLANICI_ADI:
-        # Eski yöntem (geriye dönük uyumluluk)
-        baslik = f"⚠️ {KULLANICI_ADI} DİKKAT!\n"
     else:
         baslik = ""
 
