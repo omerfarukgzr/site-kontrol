@@ -13,13 +13,10 @@ def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML', reply_to_message_id
     if not TELEGRAM_TOKEN:
         return False
     
-    cizgi = "——————————————————"
-    mesaj_son = f"{mesaj}\n{cizgi}"
-    
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         'chat_id': chat_id,
-        'text': mesaj_son,
+        'text': mesaj,
         'parse_mode': parse_mode,
         'disable_web_page_preview': True
     }
