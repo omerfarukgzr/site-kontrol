@@ -19,7 +19,7 @@ if __name__ == "__main__":
         bot_mesajlari_isle()
         
         # 2. Site kontrolü yap
-        hata_listesi, basarili_sayisi = site_kontrol_et()
+        hata_listesi, basarili_sayisi, idare_paneli_uyarisi = site_kontrol_et()
 
         if len(hata_listesi) > 0:
             ana_mesaj = (
@@ -27,6 +27,9 @@ if __name__ == "__main__":
                 f"{len(hata_listesi)} sayfa açılmadı!\n\n"
                 + "\n\n".join(hata_listesi)
             )
+            # İdare paneli uyarısı varsa ekle
+            if idare_paneli_uyarisi:
+                ana_mesaj = idare_paneli_uyarisi + "\n\n" + ana_mesaj
             telegram_gonder(ana_mesaj, hata_var_mi=True)
             print(">> ⚠️ Hata raporu (Etiketli) gönderildi.")
         else:
@@ -34,5 +37,10 @@ if __name__ == "__main__":
                 f"✅ <b>SİSTEM STABİL</b>\n"
                 f"Kontrol tamamlandı. ({basarili_sayisi} sayfa aktif)"
             )
+            
+            # İdare paneli uyarısı varsa OK mesajına ekle (tek mesaj olarak)
+            if idare_paneli_uyarisi:
+                ok_mesaji = idare_paneli_uyarisi + "\n\n" + ok_mesaji
+            
             telegram_gonder(ok_mesaji, hata_var_mi=False)
             print(">> ✅ OK raporu (Etiketsiz) gönderildi.")

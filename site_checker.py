@@ -63,12 +63,43 @@ def site_kontrol_et():
 
     # Login gerektiren URL'ler için session oluştur
     session = login_ol()
+    login_basarili = session is not None
+    
+    # Login bilgileri kontrolü
+    login_bilgileri_eksik = not LOGIN_EMAIL or not LOGIN_PASSWORD
     
     dinamik_linkler = dinamik_linkleri_bul()
-    tum_liste = SABIT_SAYFALAR + dinamik_linkler + IDARE_URLS
+    
+    # Login başarısızsa veya eksikse, idare paneli URL'lerini kontrol etme
+    if login_basarili:
+        tum_liste = SABIT_SAYFALAR + dinamik_linkler + IDARE_URLS
+    else:
+        tum_liste = SABIT_SAYFALAR + dinamik_linkler
+        # IDARE_URLS'leri atla
     
     hata_listesi = []
     basarili_sayisi = 0
+    idare_paneli_uyarisi = None
+    
+    # Login durumuna göre uyarı mesajı oluştur
+    if not login_basarili:
+        if login_bilgileri_eksik:
+            idare_paneli_uyarisi = (
+                "⚠️ <b>İDARE PANELİ KONTROL EDİLEMEDİ</b>\n\n"
+                "🔐 <b>Sebep:</b> Login bilgileri (LOGIN_EMAIL veya LOGIN_PASSWORD) "
+                "environment variable'larında tanımlı değil.\n\n"
+                "📋 <b>Kontrol edilemeyen sayfalar:</b>\n"
+                + "\n".join([f"• {url}" for url in IDARE_URLS])
+            )
+        else:
+            idare_paneli_uyarisi = (
+                "⚠️ <b>İDARE PANELİ KONTROL EDİLEMEDİ</b>\n\n"
+                "🔐 <b>Sebep:</b> Login işlemi başarısız oldu. "
+                "Email veya şifre hatalı olabilir.\n\n"
+                "📋 <b>Kontrol edilemeyen sayfalar:</b>\n"
+                + "\n".join([f"• {url}" for url in IDARE_URLS])
+            )
+    
     headers = {'User-Agent': 'Mozilla/5.0 (GitHub Actions Monitor)'}
 
     for url in tum_liste:
@@ -89,5 +120,5 @@ def site_kontrol_et():
             hata_listesi.append(f"🚫 <b>ERİŞİM YOK</b>\n🔗 {url}")
             print(f"ÇÖKME: {url} - {e}")
 
-    return hata_listesi, basarili_sayisi
+    return hata_listesi, basarili_sayisi, idare_paneli_uyarisi
 
