@@ -6,6 +6,7 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 KULLANICI_ADI = os.environ.get("TELEGRAM_USERNAME")
 USERNAMES_FILE = "usernames.json"
+SETTINGS_FILE = "settings.json"
 
 # Login bilgileri
 LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL")

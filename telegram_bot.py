@@ -5,6 +5,7 @@ import sys
 from datetime import datetime, timedelta
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, KULLANICI_ADI
 from username_manager import usernames_yukle, username_ekle, username_cikar
+from settings_manager import bildirim_durumu_al, bildirim_durumu_degistir
 
 
 def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML'):
@@ -29,6 +30,11 @@ def telegram_mesaj_gonder(chat_id, mesaj, parse_mode='HTML'):
 
 def telegram_gonder(mesaj, hata_var_mi=False):
     """Site kontrol sonuçlarını Telegram'a gönderir"""
+    # Bildirim durumunu kontrol et
+    if not bildirim_durumu_al():
+        print("🔕 Bildirimler kapalı, mesaj gönderilmedi.")
+        return
+    
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("❌ HATA: Token eksik!")
         sys.exit(1)
@@ -72,20 +78,28 @@ def bot_komutlari_kaydet():
     
     commands = [
         {
-            "command": "adduser",
-            "description": "Username ekle: /adduser @kullanici"
+            "command": "ekle",
+            "description": "👤 Username ekle: /ekle @kullanici"
         },
         {
-            "command": "deletuser",
-            "description": "Username çıkar: /deletuser @kullanici"
+            "command": "sil",
+            "description": "👤 Username çıkar: /sil @kullanici"
         },
         {
-            "command": "userlist",
-            "description": "Kayıtlı username'leri listele"
+            "command": "liste",
+            "description": "👤 Kayıtlı username'leri listele"
         },
         {
-            "command": "help",
-            "description": "Yardım mesajını göster"
+            "command": "bildirimac",
+            "description": "🔔 Bildirimleri aç"
+        },
+        {
+            "command": "bildirimkapat",
+            "description": "🔔 Bildirimleri kapat"
+        },
+        {
+            "command": "yardim",
+            "description": "❓ Yardım mesajını göster"
         }
     ]
     
@@ -146,41 +160,68 @@ def komut_isle(update):
     
     print(f"🔧 İşlenen komut: {komut}")
     
-    if komut == '/start':
+    # Komut normalizasyonu (Türkçe komutlar)
+    komut_normalize = {
+        '/start': 'start',
+        '/basla': 'start',
+        '/başla': 'start',
+        '/yardim': 'help',
+        '/yardım': 'help',
+        '/ekle': 'adduser',
+        '/sil': 'deletuser',
+        '/liste': 'userlist',
+        '/bildirimac': 'notify_on',
+        '/bildirimkapat': 'notify_off',
+    }
+    
+    # Komutu normalize et
+    normalized_komut = komut_normalize.get(komut, komut[1:])  # / işaretini kaldır
+    
+    if normalized_komut == 'start':
         baslangic_mesaji = (
             "👋 <b>Hoş Geldiniz!</b>\n\n"
             "Bu bot site kontrol sistemidir. Hata durumunda kayıtlı kullanıcıları bilgilendirir.\n\n"
-            "📋 <b>KOMUTLAR:</b>\n"
-            "/adduser @kullanici - Username ekle\n"
-            "/deletuser @kullanici - Username çıkar\n"
-            "/userlist - Kayıtlı username'leri listele\n"
-            "/help - Yardım mesajı\n\n"
+            "📋 <b>KOMUTLAR:</b>\n\n"
+            "👤 <b>Username Yönetimi:</b>\n"
+            "/ekle @kullanici - Username ekle\n"
+            "/sil @kullanici - Username çıkar\n"
+            "/liste - Kayıtlı username'leri listele\n\n"
+            "🔔 <b>Bildirimler:</b>\n"
+            "/bildirimac - Bildirimleri aç\n"
+            "/bildirimkapat - Bildirimleri kapat\n\n"
+            "❓ <b>Yardım:</b>\n"
+            "/yardim - Yardım mesajı\n\n"
             "💡 <i>Not: @ işareti opsiyoneldir</i>"
         )
         telegram_mesaj_gonder(chat_id, baslangic_mesaji)
         return True
     
-    elif komut == '/help':
+    elif normalized_komut == 'help':
         help_mesaji = (
             "📋 <b>KOMUTLAR</b>\n\n"
-            "/adduser @kullanici - Username ekle\n"
-            "/deletuser @kullanici - Username çıkar\n"
-            "/userlist - Kayıtlı username'leri listele\n"
-            "/help - Bu yardım mesajını göster\n\n"
+            "👤 <b>Username Yönetimi:</b>\n"
+            "• /ekle @kullanici - Username ekle\n"
+            "• /sil @kullanici - Username çıkar\n"
+            "• /liste - Kayıtlı username'leri listele\n\n"
+            "🔔 <b>Bildirimler:</b>\n"
+            "• /bildirimac - Bildirimleri aç\n"
+            "• /bildirimkapat - Bildirimleri kapat\n\n"
+            "❓ <b>Yardım:</b>\n"
+            "• /yardim - Yardım mesajı\n\n"
             "💡 <i>Not: @ işareti opsiyoneldir</i>"
         )
         telegram_mesaj_gonder(chat_id, help_mesaji)
         return True
     
-    elif komut == '/adduser':
+    elif normalized_komut == 'adduser':
         if len(parts) < 2:
             # Komut seçildi ama username verilmemiş, kullanıcıya örnek göster
             ornek_mesaj = (
                 "➕ <b>Username Ekleme</b>\n\n"
-                "Kullanım: <code>/adduser @kullanici</code>\n\n"
+                "Kullanım: <code>/ekle @kullanici</code>\n\n"
                 "Örnekler:\n"
-                "• <code>/adduser @omer</code>\n"
-                "• <code>/adduser omer</code>\n\n"
+                "• <code>/ekle @omer</code>\n"
+                "• <code>/ekle omer</code>\n\n"
                 "💡 <i>@ işareti opsiyoneldir</i>"
             )
             telegram_mesaj_gonder(chat_id, ornek_mesaj)
@@ -191,15 +232,15 @@ def komut_isle(update):
         telegram_mesaj_gonder(chat_id, mesaj)
         return True
     
-    elif komut == '/deletuser':
+    elif normalized_komut == 'deletuser':
         if len(parts) < 2:
             # Komut seçildi ama username verilmemiş, kullanıcıya örnek göster
             ornek_mesaj = (
                 "➖ <b>Username Çıkarma</b>\n\n"
-                "Kullanım: <code>/deletuser @kullanici</code>\n\n"
+                "Kullanım: <code>/sil @kullanici</code>\n\n"
                 "Örnekler:\n"
-                "• <code>/deletuser @omer</code>\n"
-                "• <code>/deletuser omer</code>\n\n"
+                "• <code>/sil @omer</code>\n"
+                "• <code>/sil omer</code>\n\n"
                 "💡 <i>@ işareti opsiyoneldir</i>"
             )
             telegram_mesaj_gonder(chat_id, ornek_mesaj)
@@ -210,13 +251,25 @@ def komut_isle(update):
         telegram_mesaj_gonder(chat_id, mesaj)
         return True
     
-    elif komut == '/userlist':
+    elif normalized_komut == 'userlist':
         usernames = usernames_yukle()
         if usernames:
             liste = "\n".join([f"• @{u}" for u in usernames])
             mesaj = f"📝 <b>Kayıtlı Username'ler:</b>\n\n{liste}\n\nToplam: {len(usernames)}"
         else:
-            mesaj = "📝 Henüz kayıtlı username yok.\n\n/adduser @kullanici ile ekleyebilirsiniz."
+            mesaj = "📝 Henüz kayıtlı username yok.\n\n/ekle @kullanici ile ekleyebilirsiniz."
+        telegram_mesaj_gonder(chat_id, mesaj)
+        return True
+    
+    elif normalized_komut == 'notify_on':
+        # Direkt bildirim aç komutu
+        basarili, mesaj = bildirim_durumu_degistir(True)
+        telegram_mesaj_gonder(chat_id, mesaj)
+        return True
+    
+    elif normalized_komut == 'notify_off':
+        # Direkt bildirim kapat komutu
+        basarili, mesaj = bildirim_durumu_degistir(False)
         telegram_mesaj_gonder(chat_id, mesaj)
         return True
     
